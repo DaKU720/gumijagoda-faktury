@@ -2,12 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Check, Download, Inbox, Upload, X } from "lucide-react";
+import { Check, Download, Eye, Inbox, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { acceptAction, rejectAction } from "@/app/(app)/bufor/actions";
 import { documentColumns } from "@/components/documents/columns";
 import { DocumentsTable, Pagination } from "@/components/documents/documents-table";
 import { KsefFetchDialog } from "@/components/ksef/ksef-fetch-dialog";
+import { DocumentPreview } from "@/components/preview/document-preview";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { UploadDialog } from "@/components/upload/upload-dialog";
@@ -40,6 +41,7 @@ export function BufferView({
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [dialog, setDialog] = useState<"upload" | "ksef" | null>(null);
+  const [previewing, setPreviewing] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const allSelected = rows.length > 0 && rows.every((row) => selected.has(row.id));
@@ -99,6 +101,14 @@ export function BufferView({
         header: () => <span className="sr-only">Akcje</span>,
         cell: ({ row }) => (
           <div className="flex justify-end gap-1" onClick={(event) => event.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPreviewing(row.original.id)}
+              aria-label={`Podgląd dokumentu ${row.original.number}`}
+            >
+              <Eye className="size-4" />
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -201,6 +211,7 @@ export function BufferView({
             columns={columns}
             visibility={visibility}
             order={columnOrder}
+            onRowClick={(document) => setPreviewing(document.id)}
             emptyMessage="Brak dokumentów w buforze."
           />
           <Pagination page={page} pageCount={pageCount} total={total} />
@@ -211,6 +222,7 @@ export function BufferView({
         <UploadDialog options={{ types, contractors, categories }} onClose={() => setDialog(null)} />
       )}
       {dialog === "ksef" && <KsefFetchDialog mode={ksefMode} onClose={() => setDialog(null)} />}
+      {previewing && <DocumentPreview documentId={previewing} onClose={() => setPreviewing(null)} />}
     </div>
   );
 }

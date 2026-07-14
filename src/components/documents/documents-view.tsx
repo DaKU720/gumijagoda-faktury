@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Eye, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { deleteDocumentAction } from "@/app/(app)/dokumenty/actions";
 import { ColumnSettings } from "@/components/documents/column-settings";
@@ -11,6 +11,7 @@ import { DocumentFilters } from "@/components/documents/document-filters";
 import { DocumentForm } from "@/components/documents/document-form";
 import { DocumentsTable, Pagination } from "@/components/documents/documents-table";
 import { useTablePreferences } from "@/components/documents/use-table-preferences";
+import { DocumentPreview } from "@/components/preview/document-preview";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,10 +39,11 @@ export function DocumentsView({
   categories: { id: string; path: string }[];
 }) {
   const [editing, setEditing] = useState<DocumentRow | "new" | null>(null);
+  const [previewing, setPreviewing] = useState<string | null>(null);
   const preferences = useTablePreferences("documents-table-v1");
 
   // Kolumna akcji dołączana tutaj, a nie w definicji kolumn: potrzebuje dostępu do stanu
-  // widoku (otwieranie formularza), a `columns.tsx` ma zostać czystą deklaracją prezentacji.
+  // widoku (otwieranie formularza, podglądu), a `columns.tsx` ma zostać czystą deklaracją prezentacji.
   const columns = useMemo<ColumnDef<DocumentRow>[]>(
     () => [
       ...documentColumns,
@@ -49,7 +51,13 @@ export function DocumentsView({
         id: "actions",
         enableHiding: false,
         header: () => <span className="sr-only">Akcje</span>,
-        cell: ({ row }) => <RowActions document={row.original} onEdit={() => setEditing(row.original)} />,
+        cell: ({ row }) => (
+          <RowActions
+            document={row.original}
+            onEdit={() => setEditing(row.original)}
+            onPreview={() => setPreviewing(row.original.id)}
+          />
+        ),
       },
     ],
     [],
@@ -87,6 +95,7 @@ export function DocumentsView({
         columns={columns}
         visibility={preferences.visibility}
         order={[...preferences.order, "actions"]}
+        onRowClick={(document) => setPreviewing(document.id)}
         emptyMessage={
           total === 0 && rows.length === 0
             ? "Brak dokumentów spełniających kryteria. Zmień filtry albo dodaj dokument."
@@ -103,11 +112,21 @@ export function DocumentsView({
           onClose={() => setEditing(null)}
         />
       )}
+
+      {previewing && <DocumentPreview documentId={previewing} onClose={() => setPreviewing(null)} />}
     </div>
   );
 }
 
-function RowActions({ document, onEdit }: { document: DocumentRow; onEdit: () => void }) {
+function RowActions({
+  document,
+  onEdit,
+  onPreview,
+}: {
+  document: DocumentRow;
+  onEdit: () => void;
+  onPreview: () => void;
+}) {
   const [deleting, setDeleting] = useState(false);
 
   const remove = async () => {
@@ -124,12 +143,16 @@ function RowActions({ document, onEdit }: { document: DocumentRow; onEdit: () =>
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+      <DropdownMenuTrigger asChild onClick={(event) => event.stopPropagation()}>
         <Button variant="ghost" size="sm" aria-label={`Akcje dla dokumentu ${document.number}`}>
           <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem onSelect={onPreview}>
+          <Eye className="size-4" />
+          Podgląd
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={onEdit}>
           <Pencil className="size-4" />
           Edytuj
