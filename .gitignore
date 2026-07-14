@@ -39,6 +39,9 @@ yarn-error.log*
 /test-results/
 /playwright-report/
 
+# notatki prywatne — nigdy do repozytorium
+/PRYWATNE-*.md
+
 # vercel
 .vercel
 

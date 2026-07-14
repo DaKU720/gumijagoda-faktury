@@ -14,8 +14,7 @@ Legenda: `[ ]` do zrobienia · `[~]` w toku · `[x]` gotowe
 - [x] **8. Harmonogram** — node-cron, wiele godzin na dobę, historia uruchomień
 - [x] **9. Podgląd dokumentów** — PDF w przeglądarce, czytelny widok XML, panel boczny
 - [x] **10. Testy** — 43 jednostkowe (Jest) + 11 e2e (Playwright)
-- [~] **11. Wdrożenie** — obraz Docker zweryfikowany (e2e przechodzą przeciwko kontenerowi);
-      pozostaje utworzenie projektu na Railway i podpięcie subdomeny (wymaga logowania użytkownika)
+- [x] **11. Wdrożenie** — Railway (app + Postgres), publiczny URL, 11 testów e2e przechodzi przeciwko produkcji
 - [x] **12. README** — architektura, decyzje, research rynku, założenia, ograniczenia, „co dalej”
 - [ ] **13. (opcjonalnie)** — biała lista VAT / GUS po NIP, reguły kategoryzacji po słowach kluczowych
 
@@ -46,10 +45,10 @@ Legenda: `[ ]` do zrobienia · `[~]` w toku · `[x]` gotowe
 - [x] Podgląd jest dostępny z poziomu listy dokumentów i bufora _(panel boczny, bez opuszczania listy)_
 
 ### Wdrożenie
-- [~] Aplikacja jest dostępna pod publicznym URL i działa (frontend + API + baza)
-      — obraz gotowy i zweryfikowany lokalnie; wdrożenie wymaga zalogowania na Railway
-- [x] Pełną ścieżkę można wykonać na wersji kontenerowej: wgranie / pobranie faktury → akceptacja →
-      rejestr → podgląd _(11 testów e2e przechodzi przeciwko `docker compose up`)_
+- [x] Aplikacja jest dostępna pod publicznym URL i działa (frontend + API + baza)
+      — https://gumijagoda-app-production.up.railway.app
+- [x] Pełną ścieżkę można wykonać na wdrożonej wersji: wgranie / pobranie faktury → akceptacja →
+      rejestr → podgląd _(11 testów e2e przechodzi przeciwko produkcji)_
 
 ## Wymagania niefunkcjonalne
 

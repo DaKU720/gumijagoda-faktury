@@ -3,8 +3,17 @@
 Aplikacja do ewidencji faktur: rejestr dokumentów, pobieranie z KSeF, wgrywanie faktur spoza KSeF,
 kategoryzacja drzewiasta i podgląd dokumentów bezpośrednio w przeglądarce.
 
+**Wdrożona wersja:** <https://gumijagoda-app-production.up.railway.app>
 **Repozytorium:** <https://github.com/DaKU720/gumijagoda-faktury>
-**Wdrożona wersja:** _(uzupełnić po wdrożeniu — instrukcja w [`docs/wdrozenie.md`](docs/wdrozenie.md))_
+
+Pełna ścieżka krytyczna (wgranie / pobranie faktury → bufor → akceptacja → rejestr → podgląd) jest
+zweryfikowana na wdrożonej wersji — te same testy e2e, które chodzą lokalnie, przechodzą przeciwko
+produkcji:
+
+```bash
+E2E_BASE_URL=https://gumijagoda-app-production.up.railway.app npx playwright test
+# 11 passed
+```
 
 ---
 
