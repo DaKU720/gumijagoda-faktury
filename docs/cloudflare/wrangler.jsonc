@@ -1,0 +1,82 @@
+/**
+ * Konfiguracja Cloudflare Workers — do skopiowania do katalogu głównego projektu.
+ *
+ * UWAGA: to nie jest plik działający „z pudełka”. Trzeba uzupełnić trzy wartości oznaczone
+ * TODO (id Hyperdrive, nazwa kubełka R2, nazwa workera). Reszta jest gotowa.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "gumijagoda-faktury", // TODO: nazwa Twojego workera
+  "main": ".open-next/worker.js",
+
+  // Data zgodności MUSI być >= 2024-09-23, inaczej sterowniki baz danych nie zadziałają.
+  "compatibility_date": "2026-07-01",
+  // nodejs_compat = polyfille Node.js (Buffer, node:crypto, streams). Bez tego Prisma nie wstanie.
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Pliki statyczne Next.js (JS, CSS, obrazy) serwowane przez Cloudflare, nie przez kod workera.
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "observability": {
+    "enabled": true // logi w panelu — bez tego debugowanie produkcji jest ślepe
+  },
+
+  /**
+   * HARMONOGRAM.
+   *
+   * Cron Triggers są STATYCZNE — nie da się ich zmienić z poziomu aplikacji. Dlatego budzimy
+   * workera CO GODZINĘ, a handler `scheduled` sam sprawdza w bazie, czy ta godzina jest na liście
+   * wybranej przez użytkownika w UI (patrz scheduled.ts).
+   *
+   * Efekt dla użytkownika jest identyczny jak przy node-cron: klika godziny w interfejsie
+   * i pobieranie dzieje się o tych godzinach. Zmienia się tylko mechanika pod spodem.
+   *
+   * Uwaga: cron chodzi w UTC. Przeliczenie na czas polski robi handler.
+   */
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+
+  /**
+   * ZMIENNE JAWNE (nie sekrety!).
+   * Trafiają do repozytorium — i to jest w porządku, bo nic tu nie jest tajne.
+   * KSEF_TOKEN i KSEF_NIP NIE mogą się tu znaleźć — idą przez `wrangler secret put`.
+   */
+  "vars": {
+    "KSEF_MODE": "mock",
+    "KSEF_BASE_URL": "https://api-test.ksef.mf.gov.pl",
+    "SCHEDULER_ENABLED": "true"
+  },
+
+  /**
+   * HYPERDRIVE — pooler połączeń do zewnętrznego PostgreSQL (Neon/Supabase).
+   *
+   * Worker żyje milisekundy; nawiązanie połączenia TCP+TLS do bazy trwa dłużej niż całe żądanie.
+   * Hyperdrive trzyma gotowe połączenia po stronie Cloudflare i podaje je workerowi od ręki.
+   *
+   * `localConnectionString` jest używany TYLKO przy `wrangler dev` — lokalnie łączymy się wprost
+   * z bazą z docker-compose, bez pośrednika.
+   */
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "TODO-wklej-id-z-komendy-wrangler-hyperdrive-create",
+      "localConnectionString": "postgresql://gumijagoda:gumijagoda@localhost:5432/gumijagoda"
+    }
+  ],
+
+  /**
+   * R2 — magazyn obiektów na pliki faktur (PDF, XML).
+   * Zastępuje kolumnę `bytea` w bazie: plik strumieniuje się prosto do przeglądarki,
+   * bez przechodzenia przez pamięć workera (limit 128 MB).
+   */
+  "r2_buckets": [
+    {
+      "binding": "FILES",
+      "bucket_name": "gumijagoda-faktury"
+    }
+  ]
+}

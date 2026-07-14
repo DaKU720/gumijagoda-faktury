@@ -42,6 +42,12 @@ yarn-error.log*
 # notatki prywatne — nigdy do repozytorium
 /PRYWATNE-*.md
 
+# Cloudflare: sekrety lokalne (.dev.vars) i artefakty builda OpenNext
+.dev.vars
+.dev.vars.*
+/.open-next/
+/.wrangler/
+
 # vercel
 .vercel
 

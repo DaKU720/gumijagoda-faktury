@@ -239,3 +239,13 @@ Seed (`prisma/seed.ts`, idempotentny) tworzy: 3 typy dokumentów (2 systemowe + 
 10 kategorii w drzewie (do 3 poziomów), 6 kontrahentów — w tym 4 z regułą auto-kategoryzacji —
 oraz 7 dokumentów, z czego 2 czekają w buforze. Faktury przykładowe dla trybu mock leżą
 w `src/server/ksef/fixtures/` (FA(2) i FA(3), kosztowe i sprzedażowe).
+
+---
+
+## Alternatywne wdrożenie: Cloudflare
+
+Gdyby projekt miał trafić na Cloudflare Workers (zamiast Railway), pełny plan migracji wraz z gotowymi
+plikami konfiguracyjnymi znajduje się w [`docs/migracja-cloudflare.md`](docs/migracja-cloudflare.md).
+Dokument opisuje też, co się przy tym **psuje** i dlaczego dla tego zadania Railway pozostaje
+właściwym wyborem (m.in. `node-cron` wymaga długo żyjącego procesu, a `X509Certificate` z `node:crypto`
+nie istnieje w środowisku Workers).
