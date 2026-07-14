@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Faktura KOSZTOWA w nowszym schemacie FA(3) (obowiązkowy od lutego 2026).
+  Różnice wobec FA(2), które widać poniżej: inny namespace i WariantFormularza = 3.
+  Pola, na których opiera się nasz parser (P_1, P_2, P_13_x, P_14_x, P_15, FaWiersz), są wspólne —
+  dlatego jeden parser obsługuje oba schematy.
+  Dwie stawki VAT (23% i 8%) — sprawdzian sumowania P_13_*/P_14_* zamiast czytania pojedynczego pola.
+-->
+<Faktura xmlns="http://crd.gov.pl/wzor/2025/06/25/13775/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Naglowek>
+    <KodFormularza kodSystemowy="FA (3)" wersjaSchemy="1-0E">FA</KodFormularza>
+    <WariantFormularza>3</WariantFormularza>
+    <DataWytworzeniaFa>2026-07-10T16:02:41Z</DataWytworzeniaFa>
+    <SystemInfo>ChlodTrans WMS</SystemInfo>
+  </Naglowek>
+
+  <Podmiot1>
+    <DaneIdentyfikacyjne>
+      <NIP>6771234561</NIP>
+      <Nazwa>ChłodTrans Logistyka Sp. z o.o.</Nazwa>
+    </DaneIdentyfikacyjne>
+    <Adres>
+      <KodKraju>PL</KodKraju>
+      <AdresL1>ul. Mroźna 8</AdresL1>
+      <AdresL2>30-698 Kraków</AdresL2>
+    </Adres>
+  </Podmiot1>
+
+  <Podmiot2>
+    <DaneIdentyfikacyjne>
+      <NIP>6771102954</NIP>
+      <Nazwa>Gumijagoda Sp. z o.o.</Nazwa>
+    </DaneIdentyfikacyjne>
+    <Adres>
+      <KodKraju>PL</KodKraju>
+      <AdresL1>ul. Jagodowa 7</AdresL1>
+      <AdresL2>34-300 Żywiec</AdresL2>
+    </Adres>
+    <JST>2</JST>
+    <GV>2</GV>
+  </Podmiot2>
+
+  <Fa>
+    <KodWaluty>PLN</KodWaluty>
+    <P_1>2026-07-10</P_1>
+    <P_2>CT/07/2026/512</P_2>
+    <P_6>2026-07-10</P_6>
+
+    <FaWiersz>
+      <NrWierszaFa>1</NrWierszaFa>
+      <P_7>Transport chłodniczy Żywiec–Warszawa (temp. 2–6°C)</P_7>
+      <P_8A>kurs</P_8A>
+      <P_8B>6</P_8B>
+      <P_9A>1200.00</P_9A>
+      <P_11>7200.00</P_11>
+      <P_12>23</P_12>
+    </FaWiersz>
+    <FaWiersz>
+      <NrWierszaFa>2</NrWierszaFa>
+      <P_7>Składowanie w komorze chłodniczej</P_7>
+      <P_8A>doba</P_8A>
+      <P_8B>10</P_8B>
+      <P_9A>150.00</P_9A>
+      <P_11>1500.00</P_11>
+      <P_12>8</P_12>
+    </FaWiersz>
+
+    <P_13_1>7200.00</P_13_1>
+    <P_14_1>1656.00</P_14_1>
+    <P_13_2>1500.00</P_13_2>
+    <P_14_2>120.00</P_14_2>
+    <P_15>10476.00</P_15>
+
+    <RodzajFaktury>VAT</RodzajFaktury>
+
+    <Platnosc>
+      <TerminPlatnosci>
+        <Termin>2026-07-24</Termin>
+      </TerminPlatnosci>
+      <FormaPlatnosci>6</FormaPlatnosci>
+      <RachunekBankowy>
+        <NrRB>37109024020000000610000434</NrRB>
+      </RachunekBankowy>
+    </Platnosc>
+  </Fa>
+</Faktura>

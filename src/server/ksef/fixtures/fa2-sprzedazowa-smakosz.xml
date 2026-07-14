@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Faktura SPRZEDAŻOWA w schemacie FA(2).
+  Tutaj Gumijagoda (NIP 6771102954) jest SPRZEDAWCĄ (Podmiot1) — sprzedaje żelki sieci handlowej.
+  Kontrahentem dla ewidencji jest nabywca (Podmiot2), a rachunek na fakturze jest NASZ,
+  więc import nie zapisuje go przy kontrahencie.
+-->
+<Faktura xmlns="http://crd.gov.pl/wzor/2023/06/29/12648/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Naglowek>
+    <KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>
+    <WariantFormularza>2</WariantFormularza>
+    <DataWytworzeniaFa>2026-07-12T11:30:05Z</DataWytworzeniaFa>
+    <SystemInfo>Gumijagoda Faktury</SystemInfo>
+  </Naglowek>
+
+  <Podmiot1>
+    <DaneIdentyfikacyjne>
+      <NIP>6771102954</NIP>
+      <Nazwa>Gumijagoda Sp. z o.o.</Nazwa>
+    </DaneIdentyfikacyjne>
+    <Adres>
+      <KodKraju>PL</KodKraju>
+      <AdresL1>ul. Jagodowa 7</AdresL1>
+      <AdresL2>34-300 Żywiec</AdresL2>
+    </Adres>
+  </Podmiot1>
+
+  <Podmiot2>
+    <DaneIdentyfikacyjne>
+      <NIP>8992345679</NIP>
+      <Nazwa>Sieć Handlowa Smakosz S.A.</Nazwa>
+    </DaneIdentyfikacyjne>
+    <Adres>
+      <KodKraju>PL</KodKraju>
+      <AdresL1>ul. Handlowa 100</AdresL1>
+      <AdresL2>50-950 Wrocław</AdresL2>
+    </Adres>
+  </Podmiot2>
+
+  <Fa>
+    <KodWaluty>PLN</KodWaluty>
+    <P_1>2026-07-12</P_1>
+    <P_2>GJ/2026/07/044</P_2>
+    <P_6>2026-07-12</P_6>
+
+    <FaWiersz>
+      <NrWierszaFa>1</NrWierszaFa>
+      <P_7>Żelki gumijagodowe 200 g — karton 24 szt.</P_7>
+      <P_8A>karton</P_8A>
+      <P_8B>320</P_8B>
+      <P_9A>96.00</P_9A>
+      <P_11>30720.00</P_11>
+      <P_12>8</P_12>
+    </FaWiersz>
+    <FaWiersz>
+      <NrWierszaFa>2</NrWierszaFa>
+      <P_7>Syrop gumijagodowy 500 ml</P_7>
+      <P_8A>szt</P_8A>
+      <P_8B>800</P_8B>
+      <P_9A>18.50</P_9A>
+      <P_11>14800.00</P_11>
+      <P_12>8</P_12>
+    </FaWiersz>
+
+    <P_13_2>45520.00</P_13_2>
+    <P_14_2>3641.60</P_14_2>
+    <P_15>49161.60</P_15>
+
+    <RodzajFaktury>VAT</RodzajFaktury>
+
+    <Platnosc>
+      <TerminPlatnosci>
+        <Termin>2026-08-11</Termin>
+      </TerminPlatnosci>
+      <FormaPlatnosci>6</FormaPlatnosci>
+      <RachunekBankowy>
+        <NrRB>27114020040000300201355387</NrRB>
+      </RachunekBankowy>
+    </Platnosc>
+  </Fa>
+</Faktura>

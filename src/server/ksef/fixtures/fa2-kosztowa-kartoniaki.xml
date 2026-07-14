@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Faktura KOSZTOWA w schemacie FA(2).
+  Gumijagoda (NIP 6771102954) jest tu NABYWCĄ (Podmiot2) — kupuje opakowania od Kartoniaków.
+  Kontrahentem dla ewidencji jest więc sprzedawca (Podmiot1).
+-->
+<Faktura xmlns="http://crd.gov.pl/wzor/2023/06/29/12648/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <Naglowek>
+    <KodFormularza kodSystemowy="FA (2)" wersjaSchemy="1-0E">FA</KodFormularza>
+    <WariantFormularza>2</WariantFormularza>
+    <DataWytworzeniaFa>2026-07-08T09:14:22Z</DataWytworzeniaFa>
+    <SystemInfo>Kartoniaki ERP 4.2</SystemInfo>
+  </Naglowek>
+
+  <Podmiot1>
+    <DaneIdentyfikacyjne>
+      <NIP>5252248481</NIP>
+      <Nazwa>Kartoniaki Sp. z o.o.</Nazwa>
+    </DaneIdentyfikacyjne>
+    <Adres>
+      <KodKraju>PL</KodKraju>
+      <AdresL1>ul. Tekturowa 12</AdresL1>
+      <AdresL2>31-042 Kraków</AdresL2>
+    </Adres>
+  </Podmiot1>
+
+  <Podmiot2>
+    <DaneIdentyfikacyjne>
+      <NIP>6771102954</NIP>
+      <Nazwa>Gumijagoda Sp. z o.o.</Nazwa>
+    </DaneIdentyfikacyjne>
+    <Adres>
+      <KodKraju>PL</KodKraju>
+      <AdresL1>ul. Jagodowa 7</AdresL1>
+      <AdresL2>34-300 Żywiec</AdresL2>
+    </Adres>
+  </Podmiot2>
+
+  <Fa>
+    <KodWaluty>PLN</KodWaluty>
+    <P_1>2026-07-08</P_1>
+    <P_2>FV/2026/07/117</P_2>
+    <P_6>2026-07-08</P_6>
+
+    <FaWiersz>
+      <NrWierszaFa>1</NrWierszaFa>
+      <P_7>Karton fałdowy 300x200x150 z nadrukiem</P_7>
+      <P_8A>szt</P_8A>
+      <P_8B>4000</P_8B>
+      <P_9A>2.10</P_9A>
+      <P_11>8400.00</P_11>
+      <P_12>23</P_12>
+    </FaWiersz>
+    <FaWiersz>
+      <NrWierszaFa>2</NrWierszaFa>
+      <P_7>Wkład tekturowy separujący</P_7>
+      <P_8A>szt</P_8A>
+      <P_8B>4000</P_8B>
+      <P_9A>0.65</P_9A>
+      <P_11>2600.00</P_11>
+      <P_12>23</P_12>
+    </FaWiersz>
+
+    <P_13_1>11000.00</P_13_1>
+    <P_14_1>2530.00</P_14_1>
+    <P_15>13530.00</P_15>
+
+    <Adnotacje>
+      <P_16>2</P_16>
+      <P_17>2</P_17>
+      <P_18>2</P_18>
+      <P_18A>2</P_18A>
+    </Adnotacje>
+
+    <RodzajFaktury>VAT</RodzajFaktury>
+
+    <Platnosc>
+      <TerminPlatnosci>
+        <Termin>2026-07-22</Termin>
+      </TerminPlatnosci>
+      <FormaPlatnosci>6</FormaPlatnosci>
+      <RachunekBankowy>
+        <NrRB>61109010140000071219812874</NrRB>
+        <NazwaBanku>Santander Bank Polska</NazwaBanku>
+      </RachunekBankowy>
+    </Platnosc>
+  </Fa>
+</Faktura>
