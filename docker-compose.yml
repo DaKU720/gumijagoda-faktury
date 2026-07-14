@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gumijagoda
+      POSTGRES_PASSWORD: gumijagoda
+      POSTGRES_DB: gumijagoda
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gumijagoda"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://gumijagoda:gumijagoda@db:5432/gumijagoda?schema=public
+      KSEF_MODE: ${KSEF_MODE:-mock}
+      KSEF_BASE_URL: ${KSEF_BASE_URL:-https://api-test.ksef.mf.gov.pl}
+      KSEF_NIP: ${KSEF_NIP:-}
+      KSEF_TOKEN: ${KSEF_TOKEN:-}
+      SCHEDULER_ENABLED: ${SCHEDULER_ENABLED:-true}
+      TZ: Europe/Warsaw
+    ports:
+      - "3000:3000"
+
+volumes:
+  db-data:

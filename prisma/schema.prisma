@@ -1,0 +1,229 @@
+// Model danych: system ewidencji faktur (KSeF + upload + ręczne).
+// Decyzje projektowe opisane w docs/architecture.md i docs/decisions/.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// Kierunek dokumentu: co firma ma dostać vs. co ma zapłacić.
+/// Siedzi na TYPIE dokumentu (nie na dokumencie), bo to typ definiuje kierunek —
+/// użytkownik dodając własny typ ("nota odsetkowa") od razu określa jego naturę.
+enum DocumentDirection {
+  RECEIVABLE // należność — do otrzymania (sprzedaż)
+  PAYABLE // zobowiązanie — do zapłaty (koszt)
+}
+
+/// Skąd dokument trafił do systemu (wymóg 3.5: rozróżnienie min. tych trzech).
+enum DocumentSource {
+  KSEF
+  UPLOAD
+  MANUAL
+}
+
+/// Etap obiegu. Bufor jest STATUSEM na dokumencie, nie osobną tabelą —
+/// uzasadnienie w docs/decisions/0002-bufor-jako-status-dokumentu.md.
+enum DocumentStatus {
+  BUFFER // w poczekalni, czeka na akceptację
+  ACCEPTED // w rejestrze dokumentów
+  REJECTED // odrzucony z bufora (zostaje w bazie, żeby nie wciągnąć go ponownie przy kolejnym pobraniu)
+}
+
+enum FileKind {
+  PDF
+  KSEF_XML
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+/// Rodzaj faktur pobieranych z KSeF w terminologii domenowej (nie API).
+/// Mapowanie na KSeF: PURCHASE -> Subject2 (jesteśmy nabywcą), SALES -> Subject1 (jesteśmy sprzedawcą).
+enum InvoiceKind {
+  PURCHASE // kosztowe
+  SALES // sprzedażowe
+}
+
+enum SyncTrigger {
+  MANUAL
+  SCHEDULED
+}
+
+model Contractor {
+  id   String  @id @default(cuid())
+  name String
+  /// NIP to naturalny klucz biznesowy kontrahenta — stąd unique.
+  /// Pozwala na idempotentny upsert przy imporcie z KSeF (ta sama firma = ten sam rekord).
+  nip  String  @unique
+
+  address     String?
+  bankAccount String?
+
+  /// Reguła auto-kategoryzacji "kontrahent -> kategoria" (wymóg 3.3).
+  /// Pole kontrahenta zamiast osobnej tabeli reguł: reguła jest 1:1 z kontrahentem.
+  defaultCategoryId String?
+  defaultCategory   Category? @relation(fields: [defaultCategoryId], references: [id], onDelete: SetNull)
+
+  documents Document[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model DocumentType {
+  id        String            @id @default(cuid())
+  name      String            @unique
+  direction DocumentDirection
+  /// Typy systemowe (faktura sprzedażowa / kosztowa) są nieusuwalne —
+  /// bez nich import z KSeF nie miałby do czego przypisać dokumentu.
+  isSystem  Boolean           @default(false)
+
+  documents Document[]
+
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id   String @id @default(cuid())
+  name String
+
+  /// Drzewo kategorii (wymóg 3.3) — self-relation. Filtrowanie po kategorii
+  /// obejmuje kategorię wraz z potomkami (rekurencyjne CTE w warstwie zapytań).
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryTree")
+
+  documents          Document[]
+  contractorDefaults Contractor[]
+
+  createdAt DateTime @default(now())
+
+  /// Nazwa unikalna w obrębie rodzeństwa — "Transport" może istnieć pod "Koszty" i pod "Sprzedaż".
+  @@unique([parentId, name])
+  @@index([parentId])
+}
+
+model Document {
+  id     String         @id @default(cuid())
+  number String
+  status DocumentStatus @default(BUFFER)
+  source DocumentSource
+
+  typeId String
+  type   DocumentType @relation(fields: [typeId], references: [id], onDelete: Restrict)
+
+  contractorId String
+  contractor   Contractor @relation(fields: [contractorId], references: [id], onDelete: Restrict)
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  issueDate DateTime
+  dueDate   DateTime?
+
+  /// Kwoty jako Decimal(14,2), nigdy Float — grosze muszą się zgadzać co do grosza.
+  netAmount   Decimal @db.Decimal(14, 2)
+  vatAmount   Decimal @db.Decimal(14, 2)
+  grossAmount Decimal @db.Decimal(14, 2)
+  currency    String  @default("PLN")
+
+  /// Rachunek do zapłaty (NRB/IBAN) — walidowany sumą kontrolną w warstwie domenowej.
+  paymentAccount String?
+
+  /// Numer KSeF. Unique => baza fizycznie uniemożliwia dwukrotne pobranie tej samej
+  /// faktury, niezależnie od tego, ile razy odpali się harmonogram.
+  ksefNumber String? @unique
+
+  notes String?
+
+  files DocumentFile[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Druga bariera antyduplikatowa — dla dokumentów spoza KSeF (brak numeru KSeF):
+  /// ta sama faktura tego samego kontrahenta = ten sam dokument (wymóg 3.5).
+  @@unique([number, contractorId])
+  /// Indeksy pod filtry i sortowanie z wymagania 3.1 (wydajność — wymóg 6).
+  @@index([status, issueDate])
+  @@index([status, dueDate])
+  @@index([typeId])
+  @@index([contractorId])
+  @@index([categoryId])
+}
+
+model DocumentFile {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  kind     FileKind
+  filename String
+  mimeType String
+
+  /// Zawartość pliku trzymana w bazie (bytea). Trade-off świadomy: na Railway nie ma
+  /// trwałego dysku bez wolumenu, a S3/R2 dokładałoby zależność ponad zakres zadania.
+  /// Przy realnej skali -> object storage (opisane w README, "co dalej").
+  data      Bytes
+  /// SHA-256 zawartości — trzecia bariera antyduplikatowa: ten sam plik nie wejdzie dwa razy.
+  sha256    String @unique
+  sizeBytes Int
+
+  createdAt DateTime @default(now())
+
+  @@index([documentId])
+}
+
+/// Konfiguracja harmonogramu automatycznego pobierania (wymóg 3.2).
+/// Singleton (id = "default") — jedna konfiguracja na instalację (tryb jednego użytkownika).
+model KsefScheduleConfig {
+  id      String  @id @default("default")
+  enabled Boolean @default(false)
+
+  /// Godziny uruchomień w ciągu doby, np. [1, 2, 3] => pobranie o 1:00, 2:00 i 3:00.
+  /// Lista godzin, a nie surowe wyrażenie cron, bo to jest to, co użytkownik naprawdę
+  /// wybiera w UI ("dowolna liczba i godziny wg ustawień").
+  hours Int[] @default([])
+
+  /// Które rodzaje faktur pobierać automatycznie.
+  kinds InvoiceKind[] @default([PURCHASE, SALES])
+
+  /// Ile dni wstecz obejmuje każde automatyczne pobranie (okno nadrabiające przestoje).
+  lookbackDays Int @default(7)
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Historia uruchomień synchronizacji (ręcznych i automatycznych).
+/// Wymóg 6: "obsługa błędów integracji — czytelne komunikaty, brak utraty danych".
+/// Bez tego użytkownik nie wie, czy nocne pobranie się odbyło i dlaczego nic nie przyszło.
+model KsefSyncRun {
+  id      String      @id @default(cuid())
+  trigger SyncTrigger
+  kind    InvoiceKind
+  status  SyncStatus  @default(RUNNING)
+
+  dateFrom DateTime
+  dateTo   DateTime
+
+  /// Ile faktur zwrócił KSeF vs. ile faktycznie utworzono (różnica = duplikaty pominięte).
+  foundCount    Int @default(0)
+  importedCount Int @default(0)
+  skippedCount  Int @default(0)
+
+  error String?
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([startedAt])
+}
