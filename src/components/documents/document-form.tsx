@@ -40,19 +40,25 @@ export function DocumentForm({
   const action = document ? updateDocumentAction : createDocumentAction;
   const [state, submit, pending] = useActionState(action, idleState);
 
-  // Brutto liczymy w locie z netto i VAT, ale zostawiamy pole edytowalne: przy fakturach
-  // z zagranicy albo przy zaokrągleniach kwota bywa o grosz inna, a serwer i tak sprawdza
-  // (netto + VAT = brutto) z tolerancją pół grosza.
+  // Brutto podpowiadamy z netto i VAT, ale pole zostaje edytowalne: przy zaokrągleniach albo
+  // fakturach zagranicznych kwota bywa o grosz inna. Serwer i tak sprawdza (netto + VAT = brutto)
+  // z tolerancją pół grosza.
+  //
+  // Wartość jest WYLICZANA PODCZAS RENDERU, a nie ustawiana w efekcie. Efekt oznaczałby dodatkowy
+  // przebieg renderowania po każdym wciśnięciu klawisza — i tak właśnie powstają formularze,
+  // które „migają” przy pisaniu.
   const [net, setNet] = useState(document?.netAmount ?? "");
   const [vat, setVat] = useState(document?.vatAmount ?? "");
-  const [gross, setGross] = useState(document?.grossAmount ?? "");
-  const [grossTouched, setGrossTouched] = useState(false);
+  const [grossOverride, setGrossOverride] = useState<string | null>(document ? document.grossAmount : null);
 
-  useEffect(() => {
-    if (grossTouched) return;
+  const computedGross = (() => {
     const sum = Number(net || 0) + Number(vat || 0);
-    if (Number.isFinite(sum) && (net !== "" || vat !== "")) setGross(sum.toFixed(2));
-  }, [net, vat, grossTouched]);
+    if (net === "" && vat === "") return "";
+    return Number.isFinite(sum) ? sum.toFixed(2) : "";
+  })();
+
+  // Gdy użytkownik sam wpisał brutto, jego wartość ma pierwszeństwo nad podpowiedzią.
+  const gross = grossOverride ?? computedGross;
 
   useEffect(() => {
     if (state.status === "success") {
@@ -187,10 +193,7 @@ export function DocumentForm({
                 name="grossAmount"
                 inputMode="decimal"
                 value={gross}
-                onChange={(event) => {
-                  setGrossTouched(true);
-                  setGross(event.target.value);
-                }}
+                onChange={(event) => setGrossOverride(event.target.value)}
                 placeholder="0,00"
                 required
                 aria-invalid={invalid("grossAmount")}

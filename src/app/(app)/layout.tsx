@@ -3,6 +3,16 @@ import { MainNav } from "@/components/layout/main-nav";
 import { prisma } from "@/server/db";
 
 /**
+ * Cała aplikacja renderuje się dynamicznie.
+ *
+ * Nie jest to obejście problemu z buildem, tylko stwierdzenie faktu: każdy ekran pokazuje
+ * bieżący stan ewidencji (licznik bufora, lista dokumentów, ustawienia). Statyczne
+ * prerenderowanie zamroziłoby dane z chwili budowania obrazu — i wymagałoby dostępu do bazy
+ * na etapie `docker build`, gdzie żadnej bazy nie ma i być nie powinno.
+ */
+export const dynamic = "force-dynamic";
+
+/**
  * Szkielet aplikacji. Licznik dokumentów w buforze liczymy tutaj (Server Component),
  * bo widoczny jest w nawigacji na każdej stronie — dzięki temu jedno zapytanie
  * zamiast fetchowania z klienta na każdym widoku.

@@ -1,72 +1,129 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import type { ColumnOrderState, VisibilityState } from "@tanstack/react-table";
 import { defaultColumnOrder, defaultColumnVisibility } from "@/components/documents/columns";
 
 type Preferences = { visibility: VisibilityState; order: ColumnOrderState };
 
+const DEFAULTS: Preferences = { visibility: defaultColumnVisibility, order: defaultColumnOrder };
+
 /**
  * Układ kolumn (widoczność + kolejność) trzymany w localStorage.
  *
- * Świadomie po stronie przeglądarki, nie w bazie: to preferencja prezentacji jednego
- * użytkownika przy jednym biurku, nie dana biznesowa. Zapis do bazy oznaczałby round-trip
- * na każde kliknięcie w checkboxa i tabelę użytkowników, której zadanie nie wymaga
- * (dopuszczalny tryb jednego użytkownika).
+ * Świadomie po stronie przeglądarki, nie w bazie: to preferencja prezentacji jednego użytkownika,
+ * nie dana biznesowa. Zapis do bazy oznaczałby round-trip na każde kliknięcie w checkbox
+ * i tabelę użytkowników, której zadanie nie wymaga (dopuszczalny tryb jednego użytkownika).
  *
- * Wczytujemy w `useEffect`, a nie w inicjalizatorze `useState`, bo przy renderze serwerowym
- * `localStorage` nie istnieje — czytanie go podczas hydracji dałoby rozjazd między HTML-em
- * z serwera a pierwszym renderem klienta.
+ * Dlaczego `useSyncExternalStore`, a nie `useState` + `useEffect`:
+ * localStorage JEST zewnętrznym magazynem, a to jest hook stworzony dokładnie do subskrybowania
+ * takich magazynów. Wariant z efektem („wczytaj po zamontowaniu i wywołaj setState”) daje
+ * dodatkowy przebieg renderowania i miga domyślnym układem, zanim wskoczy zapisany.
+ * Ten hook obsługuje też render serwerowy (`getServerSnapshot`) — serwer i pierwszy render klienta
+ * zgadzają się co do treści, więc nie ma rozjazdu hydracji.
  */
+
+const listeners = new Set<() => void>();
+
+/**
+ * Cache snapshotu. `useSyncExternalStore` wywołuje `getSnapshot` przy każdym renderze i porównuje
+ * wynik REFERENCYJNIE — świeżo sparsowany obiekt za każdym razem oznaczałby nieskończoną pętlę
+ * renderów. Dlatego pamiętamy ostatni surowy string i zwracamy ten sam obiekt, dopóki się nie zmienił.
+ */
+let cachedRaw: string | null = null;
+let cachedValue: Preferences = DEFAULTS;
+
+function readPreferences(storageKey: string): Preferences {
+  let raw: string | null = null;
+
+  try {
+    raw = window.localStorage.getItem(storageKey);
+  } catch {
+    // Tryb prywatny albo zablokowany storage — układ domyślny wystarczy, tabela ma działać.
+    return DEFAULTS;
+  }
+
+  if (raw === cachedRaw) return cachedValue;
+
+  cachedRaw = raw;
+  cachedValue = parsePreferences(raw);
+  return cachedValue;
+}
+
+function parsePreferences(raw: string | null): Preferences {
+  if (!raw) return DEFAULTS;
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<Preferences>;
+
+    // Zapisana kolejność może być nieaktualna (nowa wersja aplikacji dodała kolumnę). Bierzemy
+    // zapisane kolumny, które nadal istnieją, i dopisujemy na koniec nowe — zamiast wyrzucać cały
+    // układ użytkownika albo, gorzej, ukryć mu kolumnę, o której istnieniu nie wie.
+    const known = (parsed.order ?? []).filter((id) => defaultColumnOrder.includes(id));
+    const missing = defaultColumnOrder.filter((id) => !known.includes(id));
+
+    return {
+      visibility: parsed.visibility ?? defaultColumnVisibility,
+      order: [...known, ...missing],
+    };
+  } catch {
+    // Uszkodzony wpis nie może wysadzić tabeli.
+    return DEFAULTS;
+  }
+}
+
+function writePreferences(storageKey: string, preferences: Preferences) {
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(preferences));
+  } catch {
+    // Brak zapisu nie jest powodem, żeby przerwać interakcję — zmiana i tak zadziała w tej sesji.
+  }
+
+  // Unieważniamy cache i budzimy subskrybentów: bez tego `getSnapshot` zwróciłby starą wartość.
+  cachedRaw = null;
+  for (const listener of listeners) listener();
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
 export function useTablePreferences(storageKey: string) {
-  const [visibility, setVisibility] = useState<VisibilityState>(defaultColumnVisibility);
-  const [order, setOrder] = useState<ColumnOrderState>(defaultColumnOrder);
-  const [loaded, setLoaded] = useState(false);
+  const preferences = useSyncExternalStore(
+    subscribe,
+    () => readPreferences(storageKey),
+    // Render serwerowy: localStorage nie istnieje, więc zwracamy układ domyślny.
+    () => DEFAULTS,
+  );
 
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(storageKey);
-      if (stored) {
-        const parsed = JSON.parse(stored) as Partial<Preferences>;
-        if (parsed.visibility) setVisibility(parsed.visibility);
+  const update = useCallback(
+    (next: Preferences) => writePreferences(storageKey, next),
+    [storageKey],
+  );
 
-        // Zapisana kolejność może być nieaktualna (nowa wersja aplikacji dodała kolumnę).
-        // Bierzemy zapisane kolumny, które nadal istnieją, i dopisujemy na koniec nowe —
-        // zamiast wyrzucać cały układ użytkownika albo, gorzej, ukryć mu nową kolumnę.
-        if (parsed.order) {
-          const known = parsed.order.filter((id) => defaultColumnOrder.includes(id));
-          const missing = defaultColumnOrder.filter((id) => !known.includes(id));
-          setOrder([...known, ...missing]);
-        }
-      }
-    } catch {
-      // Uszkodzony wpis (albo tryb prywatny bez localStorage) nie może wysadzić tabeli —
-      // zostajemy przy układzie domyślnym.
-    }
-    setLoaded(true);
-  }, [storageKey]);
+  const setVisibility = useCallback(
+    (updater: (current: VisibilityState) => VisibilityState) => {
+      update({ ...preferences, visibility: updater(preferences.visibility) });
+    },
+    [preferences, update],
+  );
 
-  useEffect(() => {
-    if (!loaded) return;
-    window.localStorage.setItem(storageKey, JSON.stringify({ visibility, order }));
-  }, [visibility, order, loaded, storageKey]);
-
-  const reset = () => {
-    setVisibility(defaultColumnVisibility);
-    setOrder(defaultColumnOrder);
-  };
-
-  const moveColumn = (columnId: string, direction: -1 | 1) => {
-    setOrder((current) => {
-      const index = current.indexOf(columnId);
+  const moveColumn = useCallback(
+    (columnId: string, direction: -1 | 1) => {
+      const index = preferences.order.indexOf(columnId);
       const target = index + direction;
-      if (index === -1 || target < 0 || target >= current.length) return current;
+      if (index === -1 || target < 0 || target >= preferences.order.length) return;
 
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-  };
+      const order = [...preferences.order];
+      [order[index], order[target]] = [order[target], order[index]];
 
-  return { visibility, setVisibility, order, moveColumn, reset };
+      update({ ...preferences, order });
+    },
+    [preferences, update],
+  );
+
+  const reset = useCallback(() => update(DEFAULTS), [update]);
+
+  return { visibility: preferences.visibility, order: preferences.order, setVisibility, moveColumn, reset };
 }

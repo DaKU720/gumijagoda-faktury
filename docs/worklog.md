@@ -28,3 +28,49 @@
 
 **Następny krok**
 Faza 3: ustawienia — typy dokumentów, drzewo kategorii, kontrahenci z regułą auto-kategoryzacji.
+
+---
+
+## 2026-07-14 — Fazy 3–10: pełna funkcjonalność
+
+**Zrobione**
+- Ustawienia: drzewo kategorii (z ochroną przed cyklem), kontrahenci z regułą auto-kategoryzacji,
+  własne typy dokumentów (systemowe chronione przed usunięciem).
+- Rejestr: filtry/sortowanie/paginacja po stronie bazy, stan w query stringu, konfigurowalne kolumny
+  (widoczność + kolejność w `localStorage`), formularz ręczny z auto-liczeniem brutto.
+- Parser FA(2)/FA(3), upload PDF/XML z podglądem danych przed zapisem, bufor z akceptacją zbiorczą.
+- KSeF za interfejsem: `MockKsefClient` (fixtures) + `RealKsefClient` (API 2.0, RSA-OAEP + JWT).
+- Harmonogram `node-cron` (siatka godzin w UI), historia uruchomień z błędami integracji.
+- Podgląd: jeden komponent dla XML / PDF / wpisu ręcznego; PDF przez natywny czytnik przeglądarki.
+- Testy: 43 jednostkowe + 11 e2e.
+
+**Co zaskoczyło**
+- **Polski `Intl` nie grupuje tysięcy przy czterech cyfrach** — `1230,00`, ale `13 530,00` (i to twardą
+  spacją). Wywróciło asercje w testach e2e; teraz są odporne na obie formy.
+- **Prisma 7 wymaga `Uint8Array<ArrayBuffer>`** dla kolumn `Bytes` — zwykły `Buffer` nie przechodzi
+  kontroli typów (`ArrayBufferLike` ≠ `ArrayBuffer`).
+- **Prisma blokuje `migrate reset` uruchamiany przez agenta AI.** Słusznie — to nieodwracalne
+  kasowanie bazy. Zamiast prosić o zgodę, przeprojektowałem testy e2e tak, żeby **nie wymagały
+  czystej bazy**: każdy przebieg generuje fakturę z unikalnym numerem. Efekt uboczny okazał się
+  lepszy od pierwotnego planu — te same testy da się teraz puścić przeciwko wdrożonej aplikacji,
+  a tego wymaga zadanie.
+
+---
+
+## 2026-07-14 — Faza 11: przygotowanie wdrożenia
+
+**Zrobione**
+- Obraz produkcyjny zweryfikowany: `docker compose up` → migracje → seed → Next.js → cron.
+- **Wszystkie 11 testów e2e przechodzi przeciwko kontenerowi** (nie tylko serwerowi dev).
+- `railway.json`, `docs/wdrozenie.md` (krok po kroku + pułapki), README z researchem rynku.
+
+**Trzy realne błędy wdrożeniowe wyłapane przez zbudowanie obrazu (a nie zauważalne w `npm run dev`)**
+1. Next.js prerenderował strony przy budowaniu obrazu i uderzał do nieistniejącej bazy →
+   `export const dynamic = "force-dynamic"` (i tak żaden ekran ewidencji nie ma sensu jako statyczny).
+2. `prisma.config.ts` i wygenerowany klient (`src/generated/prisma`) nie trafiały do obrazu runtime →
+   `migrate deploy` i seed nie miały adresu bazy ani klienta.
+3. `MockKsefClient` czyta fixture'y z dysku → bez skopiowania `src/server/ksef/fixtures` tryb mock
+   działał lokalnie, a na wdrożeniu zwracałby pustkę. Klasyczny błąd „u mnie działa”.
+
+**Pozostaje** (wymaga logowania użytkownika): projekt na Railway, zmienne środowiskowe,
+CNAME `dev.<domena>` w Cloudflare.
