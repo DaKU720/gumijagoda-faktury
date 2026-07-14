@@ -3,7 +3,8 @@
 Aplikacja do ewidencji faktur: rejestr dokumentów, pobieranie z KSeF, wgrywanie faktur spoza KSeF,
 kategoryzacja drzewiasta i podgląd dokumentów bezpośrednio w przeglądarce.
 
-**Wdrożona wersja:** _(uzupełnić po wdrożeniu — patrz `docs/wdrozenie.md`)_
+**Repozytorium:** <https://github.com/DaKU720/gumijagoda-faktury>
+**Wdrożona wersja:** _(uzupełnić po wdrożeniu — instrukcja w [`docs/wdrozenie.md`](docs/wdrozenie.md))_
 
 ---
 

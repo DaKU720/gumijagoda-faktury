@@ -14,22 +14,34 @@ testy e2e przechodzą przeciwko kontenerowi.
 
 ## Krok po kroku
 
-### 1. Repozytorium na GitHubie
+### 1. Repozytorium na GitHubie ✅
+
+Zrobione: <https://github.com/DaKU720/gumijagoda-faktury> (publiczne).
+
+### 2. Logowanie do Railway (krok interaktywny — wymaga przeglądarki)
 
 ```bash
-gh repo create gumijagoda-faktury --private --source=. --push
+railway login
 ```
 
-(`--public`, jeśli link ma być otwarty dla rekrutera bez dodawania go jako współpracownika.)
+### 3. Projekt na Railway
 
-### 2. Projekt na Railway
+Z linii poleceń:
 
-1. [railway.com](https://railway.com) → **New Project** → **Deploy from GitHub repo** → wybierz repozytorium.
-   Railway sam wykryje `railway.json` i zbuduje obraz z `Dockerfile`.
-2. W tym samym projekcie: **+ New** → **Database** → **Add PostgreSQL**.
-3. Railway wstrzyknie do usługi aplikacji zmienną `DATABASE_URL` — **nie ustawiaj jej ręcznie**.
+```bash
+railway init --name gumijagoda-faktury   # tworzy projekt
+railway add --database postgres           # dodaje PostgreSQL (wstrzykuje DATABASE_URL)
+railway up                                # buduje obraz z Dockerfile i wdraża
+railway domain                            # przydziela publiczny adres *.up.railway.app
+```
 
-### 3. Zmienne środowiskowe (zakładka Variables usługi aplikacji)
+Albo przez [railway.com](https://railway.com) → **New Project** → **Deploy from GitHub repo** →
+wybierz repozytorium (Railway sam wykryje `railway.json` i zbuduje obraz z `Dockerfile`),
+a następnie **+ New → Database → Add PostgreSQL**.
+
+`DATABASE_URL` pochodzi z pluginu Postgres — **nie ustawiaj go ręcznie**.
+
+### 4. Zmienne środowiskowe (zakładka Variables usługi aplikacji)
 
 | Zmienna | Wartość | Uwagi |
 |---|---|---|
@@ -40,9 +52,21 @@ gh repo create gumijagoda-faktury --private --source=. --push
 | `SCHEDULER_ENABLED` | `true` | wyłącznik awaryjny harmonogramu |
 | `TZ` | `Europe/Warsaw` | godziny w harmonogramie to czas polski |
 
-`DATABASE_URL` pochodzi z pluginu Postgres — nie dodawaj go ręcznie.
+Z linii poleceń:
 
-### 4. Subdomena `dev.<twoja-domena>`
+```bash
+railway variables --set KSEF_MODE=mock \
+                  --set KSEF_BASE_URL=https://api-test.ksef.mf.gov.pl \
+                  --set SCHEDULER_ENABLED=true \
+                  --set TZ=Europe/Warsaw
+# gdy masz token z testowej Aplikacji Podatnika:
+# railway variables --set KSEF_MODE=real --set KSEF_NIP=... --set KSEF_TOKEN=...
+```
+
+### 5. (Opcjonalnie) Własna subdomena `dev.<twoja-domena>`
+
+Domyślnie wystarcza darmowy adres `*.up.railway.app` z `railway domain`. Poniżej kroki, gdyby
+aplikacja miała stanąć pod własną subdomeną.
 
 1. Railway → usługa aplikacji → **Settings → Networking → Custom Domain** → wpisz `dev.<twoja-domena>`.
    Railway pokaże docelowy adres CNAME (coś w rodzaju `xxx.up.railway.app`).
@@ -57,11 +81,11 @@ gh repo create gumijagoda-faktury --private --source=. --push
    trzeba przestawić tryb SSL na **Full (strict)**.
 3. Odczekaj na propagację (zwykle minuty) — Railway sam wystawi certyfikat Let's Encrypt.
 
-### 5. Weryfikacja wdrożenia
+### 6. Weryfikacja wdrożenia
 
 ```bash
 # Pełna ścieżka krytyczna przeciwko wersji produkcyjnej — te same testy co lokalnie.
-E2E_BASE_URL=https://dev.<twoja-domena> npx playwright test
+E2E_BASE_URL=https://<adres-z-railway> npx playwright test
 ```
 
 Testy e2e nie czyszczą bazy i generują własne, unikalne faktury — dlatego wolno je puścić
